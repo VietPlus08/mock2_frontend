@@ -11,3 +11,40 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.noPadding {
+  padding: 0 !important;
+}
+
+.footer-text {
+  margin: 10px !important;
+}
+
+.defaut-height {
+  height: 100% !important;
+}
+
+label {
+  font-size: 14px !important;
+}
+
+.ui.header {
+  margin-top: 10px !important;
+  margin-bottom: 5px !important;
+}
+
+.ui.clearing.divider {
+  margin-top: 5px !important;
+}
+
+.error.field.ui.input {
+  margin-bottom: 2px;
+}
+
+.field.ui.input {
+  margin-bottom: 2px !important;
+}
+
+.errorText {
+  color: rgb(187, 0, 0);
+}
