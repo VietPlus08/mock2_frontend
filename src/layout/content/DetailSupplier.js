@@ -1,47 +1,67 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   Divider,
   Header,
-  Input,
   Button,
-  Select,
   Form,
   FormGroup,
-  FormSelect,
   FormInput,
-  FormButton,
   Icon,
   Grid,
   GridColumn,
-  FormField,
-  Segment,
-  Container,
 } from "semantic-ui-react";
+import { SemanticToastContainer, toast } from 'react-semantic-toasts';
+import 'react-semantic-toasts/styles/react-semantic-alert.css';
 
-const ChiTietNhaCungCap = () => {
+
+const DetailSupplier = ({ detailSupplier, handleRangeChange }) => {
+  const [selectedRow, setSelectedRow] = useState();
+
+  const changeColor = (object) => {
+    setSelectedRow(object);
+    console.log("vao chi tiet");
+    console.log(object);
+  };
+  console.log(detailSupplier);
   return (
     <div>
       <Header as="h4">Thông tin nhà cung cấp</Header>
       <Divider clearing></Divider>
       <Form>
         <Form.Group unstackable widths={3}>
-          <Form.Input label="Mã nhà cung cấp" value="DOMESCO" readOnly={true} />
+          <Form.Input
+            label="Mã nhà cung cấp"
+            value={detailSupplier.supplierCode}
+            readOnly={true}
+          />
           <Form.Input
             label="Tên nhà cung cấp"
-            value="CTY DOMESCO"
+            value={detailSupplier.supplierName}
             readOnly={true}
           />
           <Form.Input
             label="Số điện thoại"
-            value="0124567897"
+            value={detailSupplier.numberPhone}
             readOnly={true}
           />
         </Form.Group>
         <Form.Group widths={3}>
-          <Form.Input label="Địa chỉ" value="Da Nang" readOnly={true} />
-          <Form.Input label="Công nợ" value="12.000.000" readOnly={true} />
-          <Form.Input label="Ghi chú" value="" readOnly={true} />
+          <Form.Input
+            label="Địa chỉ"
+            value={detailSupplier.address}
+            readOnly={true}
+          />
+          <Form.Input
+            label="Công nợ"
+            value={detailSupplier.totalDept}
+            readOnly={true}
+          />
+          <Form.Input
+            label="Ghi chú"
+            value={detailSupplier.description}
+            readOnly={true}
+          />
         </Form.Group>
       </Form>
 
@@ -61,7 +81,7 @@ const ChiTietNhaCungCap = () => {
           <GridColumn width={2}>
             <Button icon labelPosition="left" style={buttonStyle}>
               <Icon name="file alternate outline"></Icon>
-              <label>Xem</label>
+              Xem
             </Button>
           </GridColumn>
         </Grid>
@@ -70,7 +90,7 @@ const ChiTietNhaCungCap = () => {
       <Header as="h4">Danh sách hóa đơn nhập</Header>
       <Divider clearing></Divider>
 
-      <Table celled>
+      <Table celled color="yellow" selectable>
         <Table.Header>
           <Table.Row>
             <Table.HeaderCell width={3}>Mã hóa đơn</Table.HeaderCell>
@@ -82,35 +102,30 @@ const ChiTietNhaCungCap = () => {
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          <Table.Row>
-            <Table.Cell>HDN001</Table.Cell>
-            <Table.Cell>111222</Table.Cell>
-            <Table.Cell>12/12/2002</Table.Cell>
-            <Table.Cell>12:00</Table.Cell>
-            <Table.Cell>12.000.000</Table.Cell>
-            <Table.Cell>2.000.000</Table.Cell>
-          </Table.Row>
-          <Table.Row>
-            <Table.Cell>HDN002</Table.Cell>
-            <Table.Cell>111221</Table.Cell>
-            <Table.Cell>12/11/1111</Table.Cell>
-            <Table.Cell>10:00</Table.Cell>
-            <Table.Cell>12.000.000</Table.Cell>
-            <Table.Cell>2.000.000</Table.Cell>
-          </Table.Row>
-          <Table.Row>
-            <Table.Cell>HDN005</Table.Cell>
-            <Table.Cell>111223</Table.Cell>
-            <Table.Cell>12/12/1212</Table.Cell>
-            <Table.Cell>12:12</Table.Cell>
-            <Table.Cell>42.000.000</Table.Cell>
-            <Table.Cell>3.000.000</Table.Cell>
-          </Table.Row>
+          {detailSupplier.supplierInvoiceList.map((item) => (
+            <Table.Row
+              key={item.invoiceCode}
+              onClick={() => changeColor(item)}
+              className={selectedRow === item ? "warning" : ""}
+            >
+              <Table.Cell>{item.invoiceCode}</Table.Cell>
+              <Table.Cell>{item.detailCode}</Table.Cell>
+              <Table.Cell>{item.createdDate}</Table.Cell>
+              <Table.Cell>{item.createdTime}</Table.Cell>
+              <Table.Cell>{item.totalBill}</Table.Cell>
+              <Table.Cell>{item.dept}</Table.Cell>
+            </Table.Row>
+          ))}
         </Table.Body>
       </Table>
       <Grid>
         <GridColumn>
-          <Button icon labelPosition="left" floated="right">
+          <Button
+            icon
+            labelPosition="left"
+            floated="right"
+            onClick={() => handleRangeChange(1, undefined)}
+          >
             <Icon name="arrow alternate circle left outline"></Icon>
             Trở về
           </Button>
@@ -124,23 +139,8 @@ const ChiTietNhaCungCap = () => {
   );
 };
 
-const countryOptions = [
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-  { key: "af", value: "af", text: "DOMESCO" },
-];
-
 const buttonStyle = {
   marginTop: 25,
 };
 
-export default ChiTietNhaCungCap;
+export default DetailSupplier;

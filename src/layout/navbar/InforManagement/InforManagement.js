@@ -9,7 +9,7 @@ import { Button, Menu, Header, Grid, GridRow, GridColumn, Divider } from "semant
 import CustomFooter from "../../footer/CustomFooter";
 import ContentNavbar from "../../content/ContentNavbar";
 
-const QuanLyThongTin = () => {
+const InforManagement = () => {
   const [activeItem, setActiveItem] = useState(null);
   const handleItemClick = ({ name }) => setActiveItem(name);
 
@@ -71,4 +71,4 @@ const QuanLyThongTin = () => {
   );
 };
 
-export default QuanLyThongTin;
+export default InforManagement;

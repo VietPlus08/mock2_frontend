@@ -5,6 +5,7 @@ export const postRequest = async (url, data) => {
     const res = await request.post(url, data);
     return res.data;
   } catch (error) {
+    console.log(error);
     throw error;
   }
 };
@@ -14,6 +15,7 @@ export const putRequest = async (url, data) => {
     const res = await request.put(url, data);
     return res.data;
   } catch (error) {
+    console.log(error);
     throw error;
   }
 };
@@ -46,13 +48,12 @@ export const deleteRequest = async (url, chosenId) => {
  * @param {*} typeSend : POST hoặc GET
  * @param data : dũ liệu sẽ gửi đi, có hoặc không
  */
-export const fetchApi = async (url,typeSend,data)=>{
+export const fetchApi = async (url, typeSend, data) => {
   const result = null;
-  if(typeSend === 'POST'){
-    result = await postRequest(url,data);
-  }else{
+  if (typeSend === "POST") {
+    result = await postRequest(url, data);
+  } else {
     result = await getRequest(url);
   }
-  return result
-}
-
+  return result;
+};

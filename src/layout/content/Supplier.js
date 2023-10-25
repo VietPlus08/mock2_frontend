@@ -21,6 +21,9 @@ import {
   postRequest,
   putRequest,
 } from "../../api/httpRequest";
+import { SemanticToastContainer, toast } from "react-semantic-toasts";
+import "react-semantic-toasts/styles/react-semantic-alert.css";
+import { showToast } from "../item/toast";
 
 const buttonReducer = (state, action) => {
   switch (action.type) {
@@ -36,7 +39,7 @@ const buttonReducer = (state, action) => {
   }
 };
 
-const NhaCungCap = () => {
+const Supplier = ({ handleRangeChange }) => {
   const [state, dispatch] = React.useReducer(buttonReducer, {
     open: false,
     name: undefined,
@@ -44,7 +47,13 @@ const NhaCungCap = () => {
 
   const { open, name } = state;
   const [list, setList] = useState([]);
+  const [filterData, setFilterData] = useState([]);
+  const [reloadData, setReloadData] = useState(false);
   const [selected, setSelected] = useState();
+  const [filterFlag, setFilterFlag] = useState(false);
+  const [searchType, setSearchType] = useState("supplierCode");
+  const [searchValue, setSearchValue] = useState("");
+  const [sortByField, setSortByField] = useState("");
   const {
     register,
     handleSubmit,
@@ -55,46 +64,53 @@ const NhaCungCap = () => {
     setError,
   } = useForm();
 
-  const inputs = [
-    {
-      type: "manual",
-      name: "maNhaCungCap",
-      message: "Vui lòng nhập",
-    },
-    {
-      type: "manual",
-      name: "tenNhaCungCap",
-      message: "Vui lòng nhập",
-    },
-  ];
-
-  // useEffect(() => {
-  //   inputs.forEach(({ name, type, message }) => {
-  //     setError(name, { type, message });
-  //   });
-  // }, [setError]);
-
   useEffect(() => {
     const fetchApi = async () => {
       const result = await getRequest("/ncc");
       setList(result || []);
     };
     fetchApi();
-  }, []);
+  }, [reloadData]);
+
+  useEffect(() => {
+    console.log(sortByField);
+    console.log(filterData);
+    const filtedList = list
+      .filter((item) =>
+        item[searchType]
+          .toString()
+          .toLowerCase()
+          .includes(searchValue.toLowerCase())
+      )
+      .sort((a, b) =>
+        a[sortByField].toString().localeCompare(b[sortByField].toString())
+      );
+    setFilterData(filtedList);
+    console.log(filtedList);
+    if (searchValue || sortByField) {
+      setFilterFlag(true);
+    }
+  }, [filterFlag, sortByField]);
 
   const postProcess = (data) => {
     const fetchApi = async () => {
       const result = await postRequest("/ncc", data);
       setList((prev) => [...prev, result]);
     };
-    console.log(data);
     fetchApi();
   };
 
   const putProcess = (data) => {
     const fetchApi = async () => {
       const result = await putRequest("ncc", data);
-      setList((prev) => prev.filter((item) => item.maNhaCungCap !== data));
+      setList((prev) =>
+        prev.map((item) => {
+          if (item.supplierCode !== data.supplierCode) {
+            return item;
+          }
+          return data;
+        })
+      );
       setSelected(undefined);
     };
     fetchApi();
@@ -103,50 +119,65 @@ const NhaCungCap = () => {
   const deleteProcess = () => {
     if (selected) {
       const fetchApi = async () => {
-        const result = await deleteRequest("ncc", selected.maNhaCungCap);
-        setList((prev) =>
-          prev.filter((item) => item.maNhaCungCap !== selected.maNhaCungCap)
+        const result = await deleteRequest("ncc", selected.supplierCode);
+        setFilterData((prev) =>
+          prev.filter((item) => item.supplierCode !== selected.supplierCode)
         );
         setSelected(undefined);
       };
       fetchApi();
+    } else {
+      showToast("warning", "Thông báo", "Bạn chưa chọn nhà cung cấp", 4000);
     }
   };
 
   // Kiểm tra hành động thêm mới hay chỉnh sửa và gọi phương thức gửi dữ liệu
   const onSubmit = (data) => {
-    console.log(state);
     if (state.name === "Thêm") {
       postProcess(data);
+      showToast("success", "Thông báo", "Thêm mới thành công", 4000);
     }
     if (state.name === "Hoàn thành") {
       putProcess(data);
+      showToast("success", "Thông báo", "Cập nhật thành công", 4000);
     }
     dispatch({ type: "close" });
   };
-  console.log(errors);
 
   // Lấy dữ liệu từ oject được chọn để gửi lên form update
   const getInforUpdate = () => {
-    console.log(selected);
     if (selected) {
       dispatch({ type: "open", name: "Hoàn thành" });
-      setValue("maNhaCungCap", selected.maNhaCungCap);
-      setValue("tenNhaCungCap", selected.tenNhaCungCap);
-      setValue("soDienThoai", selected.soDienThoai);
-      setValue("ghiChu", selected.ghiChu);
-      setValue("diaChi", selected.diaChi);
+      setValue("supplierCode", selected.supplierCode);
+      setValue("supplierName", selected.supplierName);
+      setValue("numberPhone", selected.numberPhone);
+      setValue("description", selected.description);
+      setValue("address", selected.address);
       setValue("mail", selected.mail);
+    } else {
+      showToast("warning", "Thông báo", "Bạn chưa chọn nhà cung cấp", 4000);
     }
+  };
+
+  const showDetail = () => {
+    if (selected) {
+      handleRangeChange(2, selected);
+    } else {
+      showToast("warning", "Thông báo", "Bạn chưa chọn nhà cung cấp", 4000);
+    }
+  };
+
+  const backInMenu = () => {
+    handleRangeChange(0, selected);
   };
 
   const afterCloseModal = () => {
     dispatch({ type: "close" });
-    resetField("maNhaCungCap");
-    resetField("tenNhaCungCap");
-    resetField("soDienThoai");
-    resetField("ghiChu");
-    resetField("diaChi");
+    resetField("supplierCode");
+    resetField("supplierName");
+    resetField("numberPhone");
+    resetField("description");
+    resetField("address");
     resetField("mail");
   };
 
@@ -154,21 +185,50 @@ const NhaCungCap = () => {
     setSelected(object);
   };
 
+  ////xử lý khi thay đổi option
+  const handleChangeSearch = (e, { value }) => {
+    setSearchType(value);
+  };
+
+  const handleChangeFilter = (e, { value }) => {
+    setSortByField(value);
+    setFilterFlag(true);
+  };
+
+  ////xử lý khi thay đổi ô input search sẽ load dữ liệu
+  const handleSubmitSearch = (e) => {
+    setSearchValue(e.target.value);
+  };
+
   return (
     <div>
+      <SemanticToastContainer position="top-right" maxToasts={3} />
+
       <Header as="h5">Bộ lọc</Header>
       <Divider clearing></Divider>
       <Form>
         <Grid>
           <GridColumn width={11}>
             <FormGroup inline>
-              <label>Lọc theo:</label>
               <FormSelect
+                label="Lọc theo:"
                 placeholder="Mã nhà cung cấp"
-                options={countryOptions}
+                defaultValue={{
+                  key: "code",
+                  value: "supplierCode",
+                  text: "Mã nhà cung cấp",
+                }}
+                onChange={handleChangeSearch}
+                options={selectOptions}
               />
-              <FormInput />
-              <FormButton icon labelPosition="left">
+              <FormInput onChange={handleSubmitSearch} />
+              <FormButton
+                icon
+                labelPosition="left"
+                onClick={() => {
+                  setFilterFlag(!filterFlag);
+                }}
+              >
                 <Icon name="search"></Icon>
                 Lọc kết quả
               </FormButton>
@@ -176,10 +236,16 @@ const NhaCungCap = () => {
           </GridColumn>
           <GridColumn width={5}>
             <FormGroup inline floated="right">
-              <label>Sắp xếp:</label>
               <FormSelect
+                label="Sắp xếp:"
                 placeholder="Mã nhà cung cấp"
-                options={countryOptions}
+                defaultValue={{
+                  key: "code",
+                  value: "supplierCode",
+                  text: "Mã nhà cung cấp",
+                }}
+                options={selectOptions}
+                onChange={handleChangeFilter}
               />
             </FormGroup>
           </GridColumn>
@@ -201,27 +267,42 @@ const NhaCungCap = () => {
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {list.map((item) => (
-            <Table.Row
-              key={item.maNhaCungCap}
-              onClick={() => changeColor(item)}
-              className={selected === item ? "warning" : ""}
-            >
-              <Table.Cell>{item.maNhaCungCap}</Table.Cell>
-              <Table.Cell>{item.tenNhaCungCap}</Table.Cell>
-              <Table.Cell>{item.diaChi}</Table.Cell>
-              <Table.Cell>{item.soDienThoai}</Table.Cell>
-              <Table.Cell>{item.congNo}</Table.Cell>
-              <Table.Cell>{item.ghiChu}</Table.Cell>
-            </Table.Row>
-          ))}
+          {filterFlag
+            ? filterData.map((item) => (
+                <Table.Row
+                  key={item.supplierCode}
+                  onClick={() => changeColor(item)}
+                  className={selected === item ? "warning" : ""}
+                >
+                  <Table.Cell>{item.supplierCode}</Table.Cell>
+                  <Table.Cell>{item.supplierName}</Table.Cell>
+                  <Table.Cell>{item.address}</Table.Cell>
+                  <Table.Cell>{item.numberPhone}</Table.Cell>
+                  <Table.Cell>{item.totalDept}</Table.Cell>
+                  <Table.Cell>{item.description}</Table.Cell>
+                </Table.Row>
+              ))
+            : list.map((item) => (
+                <Table.Row
+                  key={item.supplierCode}
+                  onClick={() => changeColor(item)}
+                  className={selected === item ? "warning" : ""}
+                >
+                  <Table.Cell>{item.supplierCode}</Table.Cell>
+                  <Table.Cell>{item.supplierName}</Table.Cell>
+                  <Table.Cell>{item.address}</Table.Cell>
+                  <Table.Cell>{item.numberPhone}</Table.Cell>
+                  <Table.Cell>{item.totalDept}</Table.Cell>
+                  <Table.Cell>{item.description}</Table.Cell>
+                </Table.Row>
+              ))}
         </Table.Body>
       </Table>
-      <Button icon labelPosition="left">
+      <Button icon labelPosition="left" onClick={() => showDetail()}>
         <Icon name="copy outline"></Icon>
         Thông tin chi tiết
       </Button>
-      <Button icon labelPosition="left" floated="right">
+      <Button icon labelPosition="left" floated="right" onClick={backInMenu}>
         <Icon name="arrow alternate circle left outline"></Icon>
         <label>Trở về</label>
       </Button>
@@ -264,15 +345,15 @@ const NhaCungCap = () => {
               <label>Mã nhà cung cấp</label>
               <div
                 className={
-                  errors.tenNhaCungCap && errors.tenNhaCungCap.message
+                  errors.supplierCode && errors.supplierCode.message
                     ? "error field ui input"
                     : "field ui input"
                 }
               >
                 <input
                   type="text"
-                  name="maNhaCungCap"
-                  {...register("maNhaCungCap", {
+                  name="supplierCode"
+                  {...register("supplierCode", {
                     required: { value: true, message: "Vui lòng nhập" },
                     minLength: {
                       value: 3,
@@ -282,23 +363,23 @@ const NhaCungCap = () => {
                   readOnly={state.name === "Hoàn thành"}
                 />
               </div>
-              {errors.maNhaCungCap && (
-                <span className="errorText">{errors.maNhaCungCap.message}</span>
+              {errors.supplierCode && (
+                <span className="errorText">{errors.supplierCode.message}</span>
               )}
             </Form.Field>
             <Form.Field>
               <label>Tên nhà cung cấp</label>
               <div
                 className={
-                  errors.tenNhaCungCap && errors.tenNhaCungCap.message
+                  errors.supplierName && errors.supplierName.message
                     ? "error field ui input"
                     : "field ui input"
                 }
               >
                 <input
                   type="text"
-                  name="tenNhaCungCap"
-                  {...register("tenNhaCungCap", {
+                  name="supplierName"
+                  {...register("supplierName", {
                     required: { value: true, message: "Vui lòng nhập" },
                     minLength: {
                       value: 3,
@@ -307,22 +388,20 @@ const NhaCungCap = () => {
                   })}
                 />
               </div>
-              {errors.tenNhaCungCap && (
-                <span className="errorText">
-                  {errors.tenNhaCungCap.message}
-                </span>
+              {errors.supplierName && (
+                <span className="errorText">{errors.supplierName.message}</span>
               )}
             </Form.Field>
             <Form.Field>
               <label>Địa chỉ</label>
-              <input type="text" name="diaChi" {...register("diaChi")} />
+              <input type="text" name="address" {...register("address")} />
             </Form.Field>
             <Form.Field>
               <label>Điện thoại</label>
               <input
                 type="text"
-                name="soDienThoai"
-                {...register("soDienThoai")}
+                name="numberPhone"
+                {...register("numberPhone")}
               />
             </Form.Field>
             <Form.Field>
@@ -331,7 +410,11 @@ const NhaCungCap = () => {
             </Form.Field>
             <Form.Field>
               <label>Ghi chú</label>
-              <textarea name="ghiChu" {...register("ghiChu")} rows={2} />
+              <textarea
+                name="description"
+                {...register("description")}
+                rows={2}
+              />
             </Form.Field>
           </Form>
         </Modal.Content>
@@ -355,42 +438,12 @@ const NhaCungCap = () => {
   );
 };
 
-const countryOptions = [
-  { key: "0", value: "af", text: "DOMESCO" },
-  { key: "1", value: "af", text: "DOMESCO" },
-  { key: "2", value: "af", text: "DOMESCO" },
-  { key: "3", value: "af", text: "DOMESCO" },
-  { key: "4", value: "af", text: "DOMESCO" },
-  { key: "5", value: "af", text: "DOMESCO" },
-  { key: "6", value: "af", text: "DOMESCO" },
-  { key: "7", value: "af", text: "DOMESCO" },
-  { key: "8", value: "af", text: "DOMESCO" },
-  { key: "9", value: "af", text: "DOMESCO" },
-  { key: "10", value: "af", text: "DOMESCO" },
-  { key: "11", value: "af", text: "DOMESCO" },
+const selectOptions = [
+  { key: "code", value: "supplierCode", text: "Mã nhà cung cấp" },
+  { key: "name", value: "supplierName", text: "Tên nhà cung cấp" },
+  { key: "address", value: "address", text: "Địa chỉ" },
+  { key: "phone", value: "numberPhone", text: "Số điện thoại" },
+  { key: "dept", value: "totalDept", text: "Công nợ" },
 ];
 
-export default NhaCungCap;
-
-{
-  /* <form onSubmit={handleSubmit(createItem)}>
-        <label htmlFor="">Mã nha cung cấp</label>
-        <input
-          type="text"
-          name="maNhaCungCap"
-          {...register("maNhaCungCap", {
-            required: "Vui lòng nhập mã nhà cung cấp",
-          })}
-        />
-        <input
-          type="text"
-          name="tenNhaCungCap"
-          {...register("tenNhaCungCap", {
-            required: "Vui lòng nhập mã nhà cung cấp",
-          })}
-        />
-        <button type="submit" class="btn btn-outline-primary">
-          Submit
-        </button>
-      </form> */
-}
+export default Supplier;

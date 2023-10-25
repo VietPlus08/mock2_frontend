@@ -1,6 +1,6 @@
 import React from "react";
 import { Segment, Tab } from "semantic-ui-react";
-import QuanLyThongTin from "./quanLyThongTin/QuanLyThongTin";
+import InforManagement from "./InforManagement/InforManagement";
 
 const panes = [
   {
@@ -15,7 +15,7 @@ const panes = [
     menuItem: "Quản lý thông tin",
     render: () => (
       <Tab.Pane className="noPadding defaut-height" >
-        <QuanLyThongTin />
+        <InforManagement />
       </Tab.Pane>
     ),
   },
