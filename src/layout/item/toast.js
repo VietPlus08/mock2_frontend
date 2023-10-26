@@ -8,3 +8,8 @@ export const showToast = (type, title, description, time = 5000) => {
     time,
   });
 };
+// các type of toast
+// info, success, warning, or error
+
+
+

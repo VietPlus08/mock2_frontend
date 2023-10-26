@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   Divider,
@@ -10,22 +10,73 @@ import {
   Icon,
   Grid,
   GridColumn,
+  Container,
 } from "semantic-ui-react";
-import { SemanticToastContainer, toast } from 'react-semantic-toasts';
-import 'react-semantic-toasts/styles/react-semantic-alert.css';
-
+import { SemanticToastContainer, toast } from "react-semantic-toasts";
+import { useForm } from "react-hook-form";
+import { showToast } from "../item/toast";
+import moment from "moment/moment";
+import "react-semantic-toasts/styles/react-semantic-alert.css";
 
 const DetailSupplier = ({ detailSupplier, handleRangeChange }) => {
   const [selectedRow, setSelectedRow] = useState();
+  const [filtedData, setFilterData] = useState(
+    detailSupplier.supplierInvoiceList
+  );
+  const [initData, setInitData] = useState(detailSupplier.supplierInvoiceList);
+  const { register, watch, handleSubmit } = useForm();
 
   const changeColor = (object) => {
     setSelectedRow(object);
-    console.log("vao chi tiet");
-    console.log(object);
   };
-  console.log(detailSupplier);
+
+  const onSubmit = (data) => {
+    const { fromDate, toDate, fromTime, toTime } = data;
+    console.log(data);
+    // Chuyển đổi dữ liệu từ formDate và toDate thành các đối tượng ngày tháng
+    const fromDateObj = fromDate ? moment(fromDate) : moment("0000-1-1");
+    const toDateObj = toDate ? moment(toDate) : moment("99999-12-31");
+    console.log(fromDateObj);
+
+    // Chuyển đổi dữ liệu từ fromTime và toTime thành các đối tượng thời gian
+    const fromTimeObj = fromTime
+      ? moment(fromTime, "HH:mm:ss")
+      : moment("00:00:00", "HH:mm:ss");
+    const toTimeObj = toTime
+      ? moment(toTime, "HH:mm:ss")
+      : moment("23:59:59", "HH:mm:ss");
+    console.log(fromTimeObj);
+    console.log(toTimeObj);
+
+    // Lọc dữ liệu từ initData dựa trên ngày và thời gian
+    const filtered = initData.filter((item) => {
+      const itemDate = moment(item.createdDate);
+      const itemTime = moment(item.createdTime, "HH-mm:ss");
+      // console.log(itemTime);
+      // So sánh ngày và thời gian
+      return (
+        itemDate.isSameOrAfter(fromDateObj) &&
+        itemDate.isSameOrBefore(toDateObj) &&
+        itemTime.isSameOrAfter(fromTimeObj) &&
+        itemTime.isSameOrBefore(toTimeObj)
+      );
+    });
+    setFilterData(filtered);
+    if (fromDateObj.isAfter(toDateObj) || fromTimeObj.isAfter(toTimeObj)) {
+      showToast(
+        "warning",
+        "Thông báo",
+        "Bạn hãy nhập ngày tháng thông minh",
+        4000
+      );
+    }
+    console.log(filtered);
+  };
+
   return (
     <div>
+      <SemanticToastContainer position="top-right" maxToasts={3} />
+
       <Header as="h4">Thông tin nhà cung cấp</Header>
       <Divider clearing></Divider>
       <Form>
@@ -68,23 +119,48 @@ const DetailSupplier = ({ detailSupplier, handleRangeChange }) => {
       <Header as="h4">Thời gian</Header>
       <Divider clearing></Divider>
 
-      <Form>
-        <Grid>
-          <GridColumn width={14}>
-            <FormGroup widths={4}>
-              <FormInput label="Từ ngày" type="date" />
-              <FormInput label="Đến ngày" type="date" />
-              <FormInput label="Từ giờ" type="time" size="small" />
-              <FormInput label="Đến giờ" type="time" size="small" />
-            </FormGroup>
-          </GridColumn>
-          <GridColumn width={2}>
-            <Button icon labelPosition="left" style={buttonStyle}>
+      <Form onSubmit={handleSubmit(onSubmit)}>
+        <Container fluid>
+          <FormGroup widths={4}>
+            <div className="field">
+              <label htmlFor="">Từ ngày</label>
+              <div className="ui small input">
+                <input type="date" {...register("fromDate")} />
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="">Đến ngày</label>
+              <div className="ui small input">
+                <input type="date" {...register("toDate")} />
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="">Từ giờ</label>
+              <div className="ui small input">
+                <input type="time" {...register("fromTime")} />
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="">Đến giờ</label>
+              <div className="ui small input">
+                <input type="time" {...register("toTime")} />
+              </div>
+            </div>
+            <Button
+              icon
+              labelPosition="left"
+              type="submit"
+              style={{ marginLeft: 5, marginTop: 24 }}
+            >
               <Icon name="file alternate outline"></Icon>
               Xem
             </Button>
-          </GridColumn>
-        </Grid>
+          </FormGroup>
+          {/* <Button icon labelPosition="left" style={buttonStyle} type="submit">
+              <Icon name="file alternate outline"></Icon>
+              Xem
+            </Button> */}
+        </Container>
       </Form>
 
       <Header as="h4">Danh sách hóa đơn nhập</Header>
@@ -102,7 +178,7 @@ const DetailSupplier = ({ detailSupplier, handleRangeChange }) => {
           </Table.Row>
         </Table.Header>
         <Table.Body>
-          {detailSupplier.supplierInvoiceList.map((item) => (
+          {filtedData.map((item) => (
             <Table.Row
               key={item.invoiceCode}
               onClick={() => changeColor(item)}
@@ -110,7 +186,9 @@ const DetailSupplier = ({ detailSupplier, handleRangeChange }) => {
             >
               <Table.Cell>{item.invoiceCode}</Table.Cell>
               <Table.Cell>{item.detailCode}</Table.Cell>
-              <Table.Cell>{item.createdDate}</Table.Cell>
+              <Table.Cell>
+                {moment(item.createdDate, "YYYY-MM-DD").format("DD/MM/YYYY")}
+              </Table.Cell>
               <Table.Cell>{item.createdTime}</Table.Cell>
               <Table.Cell>{item.totalBill}</Table.Cell>
               <Table.Cell>{item.dept}</Table.Cell>
@@ -129,7 +207,12 @@ const DetailSupplier = ({ detailSupplier, handleRangeChange }) => {
             <Icon name="arrow alternate circle left outline"></Icon>
             Trở về
           </Button>
-          <Button icon labelPosition="left" floated="right">
+          <Button
+            icon
+            labelPosition="left"
+            floated="right"
+            style={{ marginRight: 10 }}
+          >
             <Icon name="copy outline"></Icon>
             Xem hóa đơn
           </Button>

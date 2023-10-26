@@ -13,6 +13,7 @@ import {
   Grid,
   GridColumn,
   Modal,
+  Container,
 } from "semantic-ui-react";
 import { useForm } from "react-hook-form";
 import {
@@ -21,9 +22,11 @@ import {
   postRequest,
   putRequest,
 } from "../../api/httpRequest";
-import { SemanticToastContainer, toast } from "react-semantic-toasts";
+import { SemanticToastContainer } from "react-semantic-toasts";
 import "react-semantic-toasts/styles/react-semantic-alert.css";
+
 import { showToast } from "../item/toast";
+import CustomModal from "../item/CustomModal";
 
 const buttonReducer = (state, action) => {
   switch (action.type) {
@@ -53,7 +56,8 @@ const Supplier = ({ handleRangeChange }) => {
   const [filterFlag, setFilterFlag] = useState(false);
   const [searchType, setSearchType] = useState("supplierCode");
   const [searchValue, setSearchValue] = useState("");
-  const [sortByField, setSortByField] = useState("");
+  const [sortByField, setSortByField] = useState("supplierCode");
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const {
     register,
     handleSubmit,
@@ -70,11 +74,9 @@ const Supplier = ({ handleRangeChange }) => {
       setList(result || []);
     };
     fetchApi();
-  }, [reloadData]);
+  }, []);
 
   useEffect(() => {
-    console.log(sortByField);
-    console.log(filterData);
     const filtedList = list
       .filter((item) =>
         item[searchType]
@@ -86,29 +88,58 @@ const Supplier = ({ handleRangeChange }) => {
         a[sortByField].toString().localeCompare(b[sortByField].toString())
       );
     setFilterData(filtedList);
-    console.log(filtedList);
-    if (searchValue || sortByField) {
+    if (filtedList.length === 0 && searchValue) {
+      console.log(filtedList);
+      showToast("info", "Thông báo", "Không tìm thấy dữ liệu nào", 4000);
+    }
+
+    if (searchValue || sortByField !== "supplierCode") {
       setFilterFlag(true);
     }
   }, [filterFlag, sortByField]);
 
   const postProcess = (data) => {
     const fetchApi = async () => {
-      const result = await postRequest("/ncc", data);
+      const result = await postRequest("ncc", data);
       setList((prev) => [...prev, result]);
+      setFilterData((prev) => [...prev, result]);
     };
     fetchApi();
   };
 
   const putProcess = (data) => {
     const fetchApi = async () => {
-      const result = await putRequest("ncc", data);
+      const result = [];
+      try {
+        result = await putRequest("ncc", data);
+      } catch (error) {
+        const cloneErr = { ...error.response.data };
+        await setErrorField(cloneErr);
+      }
+
+      const setErrorField = async (resultInput) => {
+        const obj = resultInput || {};
+        for (const key in obj) {
+          setError(key, {
+            type: "custom",
+            message: obj[key],
+          });
+        }
+      };
       setList((prev) =>
         prev.map((item) => {
-          if (item.supplierCode !== data.supplierCode) {
+          if (item.supplierCode !== result.supplierCode) {
             return item;
           }
-          return data;
+          return result;
+        })
+      );
+      setFilterData((prev) =>
+        prev.map((item) => {
+          if (item.supplierCode !== result.supplierCode) {
+            return item;
+          }
+          return result;
         })
       );
       setSelected(undefined);
@@ -117,29 +148,44 @@ const Supplier = ({ handleRangeChange }) => {
   };
 
   const deleteProcess = () => {
-    if (selected) {
-      const fetchApi = async () => {
-        const result = await deleteRequest("ncc", selected.supplierCode);
-        setFilterData((prev) =>
-          prev.filter((item) => item.supplierCode !== selected.supplierCode)
-        );
-        setSelected(undefined);
-      };
-      fetchApi();
-    } else {
-      showToast("warning", "Thông báo", "Bạn chưa chọn nhà cung cấp", 4000);
-    }
+    const fetchApi = async () => {
+      const result = await deleteRequest("ncc", selected.supplierCode);
+      setList((prev) =>
+        prev.filter((item) => item.supplierCode !== selected.supplierCode)
+      );
+      setFilterData((prev) =>
+        prev.filter((item) => item.supplierCode !== selected.supplierCode)
+      );
+      setSelected(undefined);
+      showToast(
+        "success",
+        "Thông báo",
+        "Xóa thành công nhà cung cấp mã " + result,
+        4000
+      );
+    };
+    fetchApi();
   };
 
   // Kiểm tra hành động thêm mới hay chỉnh sửa và gọi phương thức gửi dữ liệu
   const onSubmit = (data) => {
     if (state.name === "Thêm") {
       postProcess(data);
-      showToast("success", "Thông báo", "Thêm mới thành công", 4000);
+      showToast(
+        "success",
+        "Thông báo",
+        "Thêm mới thành công nhà cung cấp mã " + data.supplierCode,
+        4000
+      );
     }
     if (state.name === "Hoàn thành") {
       putProcess(data);
-      showToast("success", "Thông báo", "Cập nhật thành công", 4000);
+      showToast(
+        "success",
+        "Thông báo",
+        "Cập nhật thành công nhà cung cấp mã " + data.supplierCode,
+        4000
+      );
     }
     dispatch({ type: "close" });
   };
@@ -162,6 +208,15 @@ const Supplier = ({ handleRangeChange }) => {
   const showDetail = () => {
     if (selected) {
       handleRangeChange(2, selected);
+    } else {
+      showToast("warning", "Thông báo", "Bạn chưa chọn nhà cung cấp", 4000);
+    }
+  };
+
+  const checkForDeleting = () => {
+    console.log(selected);
+    if (selected) {
+      setOpenDeleteModal(true);
     } else {
       showToast("warning", "Thông báo", "Bạn chưa chọn nhà cung cấp", 4000);
     }
@@ -213,11 +268,7 @@ const Supplier = ({ handleRangeChange }) => {
               <FormSelect
                 label="Lọc theo:"
                 placeholder="Mã nhà cung cấp"
-                defaultValue={{
-                  key: "code",
-                  value: "supplierCode",
-                  text: "Mã nhà cung cấp",
-                }}
+                defaultValue={"Mã nhà cung cấp"}
                 onChange={handleChangeSearch}
                 options={selectOptions}
               />
@@ -239,11 +290,7 @@ const Supplier = ({ handleRangeChange }) => {
               <FormSelect
                 label="Sắp xếp:"
                 placeholder="Mã nhà cung cấp"
-                defaultValue={{
-                  key: "code",
-                  value: "supplierCode",
-                  text: "Mã nhà cung cấp",
-                }}
+                defaultValue={"Mã nhà cung cấp"}
                 options={selectOptions}
                 onChange={handleChangeFilter}
               />
@@ -298,40 +345,55 @@ const Supplier = ({ handleRangeChange }) => {
               ))}
         </Table.Body>
       </Table>
-      <Button icon labelPosition="left" onClick={() => showDetail()}>
+      {/* <Button icon labelPosition="left" onClick={() => showDetail()}>
         <Icon name="copy outline"></Icon>
         Thông tin chi tiết
-      </Button>
-      <Button icon labelPosition="left" floated="right" onClick={backInMenu}>
-        <Icon name="arrow alternate circle left outline"></Icon>
-        <label>Trở về</label>
-      </Button>
-      <Button
-        icon
-        labelPosition="left"
-        floated="right"
-        onClick={() => deleteProcess()}
-      >
-        <Icon name="delete"></Icon>
-        Xóa
-      </Button>
-      <Button
-        icon
-        labelPosition="left"
-        floated="right"
-        onClick={getInforUpdate}
-      >
-        <Icon name="pencil"></Icon>Sửa
-      </Button>
-      <Button
-        icon
-        labelPosition="left"
-        floated="right"
-        onClick={() => dispatch({ type: "open", name: "Thêm" })}
-      >
-        <Icon name="plus circle"></Icon>
-        Thêm
-      </Button>
+      </Button> */}
+      <Container fluid>
+        <Button icon labelPosition="left" onClick={() => showDetail()}>
+          <Icon name="copy outline"></Icon>
+          Thông tin chi tiết
+        </Button>
+        <Button
+          icon
+          labelPosition="left"
+          floated="right"
+          style={styleButton}
+          onClick={backInMenu}
+        >
+          <Icon name="arrow alternate circle left outline"></Icon>
+          <label>Trở về</label>
+        </Button>
+        <Button
+          icon
+          labelPosition="left"
+          floated="right"
+          style={styleButton}
+          onClick={checkForDeleting}
+        >
+          <Icon name="delete"></Icon>
+          Xóa
+        </Button>
+        <Button
+          icon
+          labelPosition="left"
+          floated="right"
+          style={styleButton}
+          onClick={getInforUpdate}
+        >
+          <Icon name="pencil"></Icon>Sửa
+        </Button>
+        <Button
+          icon
+          labelPosition="left"
+          floated="right"
+          style={styleButton}
+          onClick={() => dispatch({ type: "open", name: "Thêm" })}
+        >
+          <Icon name="plus circle"></Icon>
+          Thêm
+        </Button>
+      </Container>
 
       <Modal
         size="small"
@@ -434,6 +496,12 @@ const Supplier = ({ handleRangeChange }) => {
           </Button>
         </Modal.Actions>
       </Modal>
+      <CustomModal
+        open={openDeleteModal}
+        setOpen={setOpenDeleteModal}
+        deleteProcess={deleteProcess}
+        id={selected && selected.supplierCode}
+      ></CustomModal>
     </div>
   );
 };
@@ -445,5 +513,9 @@ const selectOptions = [
   { key: "phone", value: "numberPhone", text: "Số điện thoại" },
   { key: "dept", value: "totalDept", text: "Công nợ" },
 ];
+
+const styleButton = {
+  marginLeft: 10,
+};
 
 export default Supplier;
