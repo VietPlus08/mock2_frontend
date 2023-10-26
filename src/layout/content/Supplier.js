@@ -114,35 +114,36 @@ const Supplier = ({ handleRangeChange }) => {
         result = await putRequest("ncc", data);
       } catch (error) {
         const cloneErr = { ...error.response.data };
+        console.log(cloneErr);
         await setErrorField(cloneErr);
       }
 
-      const setErrorField = async (resultInput) => {
-        const obj = resultInput || {};
-        for (const key in obj) {
-          setError(key, {
-            type: "custom",
-            message: obj[key],
-          });
-        }
-      };
-      setList((prev) =>
-        prev.map((item) => {
-          if (item.supplierCode !== result.supplierCode) {
-            return item;
-          }
-          return result;
-        })
-      );
-      setFilterData((prev) =>
-        prev.map((item) => {
-          if (item.supplierCode !== result.supplierCode) {
-            return item;
-          }
-          return result;
-        })
-      );
+      // setList((prev) =>
+      //   prev.map((item) => {
+      //     if (item.supplierCode !== result.supplierCode) {
+      //       return item;
+      //     }
+      //     return result;
+      //   })
+      // );
+      // setFilterData((prev) =>
+      //   prev.map((item) => {
+      //     if (item.supplierCode !== result.supplierCode) {
+      //       return item;
+      //     }
+      //     return result;
+      //   })
+      // );
       setSelected(undefined);
+    };
+    const setErrorField = async (resultInput) => {
+      const obj = resultInput || {};
+      for (const key in obj) {
+        setError(key, {
+          type: "custom",
+          message: obj[key],
+        });
+      }
     };
     fetchApi();
   };
@@ -171,23 +172,29 @@ const Supplier = ({ handleRangeChange }) => {
   const onSubmit = (data) => {
     if (state.name === "Thêm") {
       postProcess(data);
-      showToast(
-        "success",
-        "Thông báo",
-        "Thêm mới thành công nhà cung cấp mã " + data.supplierCode,
-        4000
-      );
+      if (!errors) {
+        showToast(
+          "success",
+          "Thông báo",
+          "Thêm mới thành công nhà cung cấp mã " + data.supplierCode,
+          4000
+        );
+      }
     }
     if (state.name === "Hoàn thành") {
       putProcess(data);
-      showToast(
-        "success",
-        "Thông báo",
-        "Cập nhật thành công nhà cung cấp mã " + data.supplierCode,
-        4000
-      );
+      if (!errors) {
+        showToast(
+          "success",
+          "Thông báo",
+          "Cập nhật thành công nhà cung cấp mã " + data.supplierCode,
+          4000
+        );
+      }
     }
-    dispatch({ type: "close" });
+    if (!errors) {
+      dispatch({ type: "close" });
+    }
   };
 
   // Lấy dữ liệu từ oject được chọn để gửi lên form update
@@ -442,7 +449,10 @@ const Supplier = ({ handleRangeChange }) => {
                   type="text"
                   name="supplierName"
                   {...register("supplierName", {
-                    required: { value: true, message: "Vui lòng nhập" },
+                    required: {
+                      value: true,
+                      message: "Vui lòng nhập tối thiểu 3 kí tự",
+                    },
                     minLength: {
                       value: 3,
                       message: "Vui lòng nhập tối thiểu 3 kí tự",
@@ -465,6 +475,9 @@ const Supplier = ({ handleRangeChange }) => {
                 name="numberPhone"
                 {...register("numberPhone")}
               />
+              {errors.numberPhone && (
+                <span className="errorText">{errors.numberPhone.message}</span>
+              )}
             </Form.Field>
             <Form.Field>
               <label>Email</label>
