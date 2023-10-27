@@ -48,3 +48,11 @@ label {
 .errorText {
   color: rgb(187, 0, 0);
 }
+
+/* td {
+  text-align: center;
+} */
+
+thead {
+  text-align: center;
+}

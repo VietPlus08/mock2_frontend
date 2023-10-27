@@ -14,6 +14,7 @@ import {
   GridColumn,
   Modal,
   Container,
+  Sticky,
 } from "semantic-ui-react";
 import { useForm } from "react-hook-form";
 import {
@@ -31,10 +32,8 @@ import CustomModal from "../item/CustomModal";
 const buttonReducer = (state, action) => {
   switch (action.type) {
     case "close":
-      console.log(state);
       return { open: false };
     case "open":
-      console.log(state);
       return {
         open: true,
         name: action.name,
@@ -51,7 +50,6 @@ const Supplier = ({ handleRangeChange }) => {
   const { open, name } = state;
   const [list, setList] = useState([]);
   const [filterData, setFilterData] = useState([]);
-  const [reloadData, setReloadData] = useState(false);
   const [selected, setSelected] = useState();
   const [filterFlag, setFilterFlag] = useState(false);
   const [searchType, setSearchType] = useState("supplierCode");
@@ -61,7 +59,7 @@ const Supplier = ({ handleRangeChange }) => {
   const {
     register,
     handleSubmit,
-    resetField,
+    reset,
     setValue,
     formState: { errors },
     watch,
@@ -78,15 +76,31 @@ const Supplier = ({ handleRangeChange }) => {
 
   useEffect(() => {
     const filtedList = list
-      .filter((item) =>
-        item[searchType]
-          .toString()
-          .toLowerCase()
-          .includes(searchValue.toLowerCase())
-      )
-      .sort((a, b) =>
-        a[sortByField].toString().localeCompare(b[sortByField].toString())
-      );
+      .filter((item) => {
+        if (item[searchType]) {
+          return item[searchType]
+            .toString()
+            .toLowerCase()
+            .includes(searchValue.toLowerCase());
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (a[sortByField] && b[sortByField]) {
+          if (sortByField === "numberPhone" || sortByField === "totalDept") {
+            return parseFloat(a[sortByField]) - parseFloat(b[sortByField]);
+          }
+          return a[sortByField]
+            .toString()
+            .localeCompare(b[sortByField].toString());
+        }
+        if (!a[sortByField]) {
+          return 1;
+        } else if (!b[sortByField]) {
+          return -1;
+        }
+        return 0;
+      });
     setFilterData(filtedList);
     if (filtedList.length === 0 && searchValue) {
       console.log(filtedList);
@@ -100,40 +114,68 @@ const Supplier = ({ handleRangeChange }) => {
 
   const postProcess = (data) => {
     const fetchApi = async () => {
-      const result = await postRequest("ncc", data);
-      setList((prev) => [...prev, result]);
-      setFilterData((prev) => [...prev, result]);
+      try {
+        const result = await postRequest("ncc", data);
+        setList((prev) => [...prev, result]);
+        setFilterData((prev) => [...prev, result]);
+        showToast(
+          "success",
+          "Thông báo",
+          "Thêm mới thành công nhà cung cấp mã " + result.supplierCode,
+          4000
+        );
+        dispatch({ type: "close" });
+      } catch (error) {
+        const cloneErr = { ...error.response.data };
+        console.log(cloneErr);
+        await setErrorField(cloneErr);
+      }
+    };
+    const setErrorField = async (resultInput) => {
+      const obj = resultInput || {};
+      for (const key in obj) {
+        setError(key, {
+          type: "custom",
+          message: obj[key],
+        });
+      }
     };
     fetchApi();
   };
 
   const putProcess = (data) => {
     const fetchApi = async () => {
-      const result = [];
       try {
-        result = await putRequest("ncc", data);
+        const result = await putRequest("ncc", data);
+        setList((prev) =>
+          prev.map((item) => {
+            if (item.supplierCode !== result.supplierCode) {
+              return item;
+            }
+            return result;
+          })
+        );
+        setFilterData((prev) =>
+          prev.map((item) => {
+            if (item.supplierCode !== result.supplierCode) {
+              return item;
+            }
+            return result;
+          })
+        );
+        showToast(
+          "success",
+          "Thông báo",
+          "Cập nhật thành công nhà cung cấp mã " + result.supplierCode,
+          4000
+        );
+        dispatch({ type: "close" });
+        reset();
       } catch (error) {
         const cloneErr = { ...error.response.data };
         console.log(cloneErr);
         await setErrorField(cloneErr);
       }
-
-      // setList((prev) =>
-      //   prev.map((item) => {
-      //     if (item.supplierCode !== result.supplierCode) {
-      //       return item;
-      //     }
-      //     return result;
-      //   })
-      // );
-      // setFilterData((prev) =>
-      //   prev.map((item) => {
-      //     if (item.supplierCode !== result.supplierCode) {
-      //       return item;
-      //     }
-      //     return result;
-      //   })
-      // );
       setSelected(undefined);
     };
     const setErrorField = async (resultInput) => {
@@ -172,29 +214,14 @@ const Supplier = ({ handleRangeChange }) => {
   const onSubmit = (data) => {
     if (state.name === "Thêm") {
       postProcess(data);
-      if (!errors) {
-        showToast(
-          "success",
-          "Thông báo",
-          "Thêm mới thành công nhà cung cấp mã " + data.supplierCode,
-          4000
-        );
-      }
     }
     if (state.name === "Hoàn thành") {
       putProcess(data);
-      if (!errors) {
-        showToast(
-          "success",
-          "Thông báo",
-          "Cập nhật thành công nhà cung cấp mã " + data.supplierCode,
-          4000
-        );
-      }
     }
-    if (!errors) {
-      dispatch({ type: "close" });
-    }
+    console.log(isObjectEmpty(errors));
+    // if (isObjectEmpty(errors)) {
+    //   dispatch({ type: "close" });
+    // }
   };
 
   // Lấy dữ liệu từ oject được chọn để gửi lên form update
@@ -235,12 +262,8 @@ const Supplier = ({ handleRangeChange }) => {
 
   const afterCloseModal = () => {
     dispatch({ type: "close" });
-    resetField("supplierCode");
-    resetField("supplierName");
-    resetField("numberPhone");
-    resetField("description");
-    resetField("address");
-    resetField("mail");
+    reset();
+    setSelected(undefined);
   };
 
   const changeColor = (object) => {
@@ -285,7 +308,17 @@ const Supplier = ({ handleRangeChange }) => {
                 labelPosition="left"
                 onClick={() => {
                   setFilterFlag(!filterFlag);
+                  if (!searchValue) {
+                    showToast(
+                      "warning",
+                      "Thông báo",
+                      "Bạn chưa nhập dữ liệu",
+                      4000
+                    );
+                  }
                 }}
+                basic
+                color="grey"
               >
                 <Icon name="search"></Icon>
                 Lọc kết quả
@@ -309,55 +342,73 @@ const Supplier = ({ handleRangeChange }) => {
       <Header as="h5">Danh sách nhà cung cấp</Header>
       <Divider clearing></Divider>
 
-      <Table celled color="yellow" selectable>
-        <Table.Header>
-          <Table.Row>
-            <Table.HeaderCell width={3}>Mã nhà cung cấp</Table.HeaderCell>
-            <Table.HeaderCell>Tên nhà cung cấp</Table.HeaderCell>
-            <Table.HeaderCell>Địa chỉ</Table.HeaderCell>
-            <Table.HeaderCell>Số điện thoại</Table.HeaderCell>
-            <Table.HeaderCell>Công nợ</Table.HeaderCell>
-            <Table.HeaderCell>Ghi chú</Table.HeaderCell>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {filterFlag
-            ? filterData.map((item) => (
-                <Table.Row
-                  key={item.supplierCode}
-                  onClick={() => changeColor(item)}
-                  className={selected === item ? "warning" : ""}
-                >
-                  <Table.Cell>{item.supplierCode}</Table.Cell>
-                  <Table.Cell>{item.supplierName}</Table.Cell>
-                  <Table.Cell>{item.address}</Table.Cell>
-                  <Table.Cell>{item.numberPhone}</Table.Cell>
-                  <Table.Cell>{item.totalDept}</Table.Cell>
-                  <Table.Cell>{item.description}</Table.Cell>
-                </Table.Row>
-              ))
-            : list.map((item) => (
-                <Table.Row
-                  key={item.supplierCode}
-                  onClick={() => changeColor(item)}
-                  className={selected === item ? "warning" : ""}
-                >
-                  <Table.Cell>{item.supplierCode}</Table.Cell>
-                  <Table.Cell>{item.supplierName}</Table.Cell>
-                  <Table.Cell>{item.address}</Table.Cell>
-                  <Table.Cell>{item.numberPhone}</Table.Cell>
-                  <Table.Cell>{item.totalDept}</Table.Cell>
-                  <Table.Cell>{item.description}</Table.Cell>
-                </Table.Row>
-              ))}
-        </Table.Body>
-      </Table>
-      {/* <Button icon labelPosition="left" onClick={() => showDetail()}>
-        <Icon name="copy outline"></Icon>
-        Thông tin chi tiết
-      </Button> */}
+      <div
+        style={{
+          display: "block",
+          overflowX: "auto",
+          height: "49vh",
+          marginBottom: "12px",
+          borderTop: "2px solid #fbbd08",
+        }}
+      >
+        <Table celled selectable>
+          <Table.Header style={{ position: "sticky", top: 0 }}>
+            <Table.Row>
+              <Table.HeaderCell width={3}>Mã nhà cung cấp</Table.HeaderCell>
+              <Table.HeaderCell>Tên nhà cung cấp</Table.HeaderCell>
+              <Table.HeaderCell>Địa chỉ</Table.HeaderCell>
+              <Table.HeaderCell>Số điện thoại</Table.HeaderCell>
+              <Table.HeaderCell>Công nợ</Table.HeaderCell>
+              <Table.HeaderCell>Ghi chú</Table.HeaderCell>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {filterFlag
+              ? filterData.map((item) => (
+                  <Table.Row
+                    key={item.supplierCode}
+                    onClick={() => changeColor(item)}
+                    className={selected === item ? "warning" : ""}
+                  >
+                    <Table.Cell style={{ textAlign: "right !important" }}>
+                      {item.supplierCode}
+                    </Table.Cell>
+                    <Table.Cell>{item.supplierName}</Table.Cell>
+                    <Table.Cell>{item.address}</Table.Cell>
+                    <Table.Cell style={{ textAlign: "right" }}>
+                      {item.numberPhone}
+                    </Table.Cell>
+                    <Table.Cell style={{ textAlign: "right" }}>
+                      {item.totalDept}
+                    </Table.Cell>
+                    <Table.Cell>{item.description}</Table.Cell>
+                  </Table.Row>
+                ))
+              : list.map((item) => (
+                  <Table.Row
+                    key={item.supplierCode}
+                    onClick={() => changeColor(item)}
+                    className={selected === item ? "warning" : ""}
+                  >
+                    <Table.Cell>{item.supplierCode}</Table.Cell>
+                    <Table.Cell>{item.supplierName}</Table.Cell>
+                    <Table.Cell>{item.address}</Table.Cell>
+                    <Table.Cell>{item.numberPhone}</Table.Cell>
+                    <Table.Cell>{item.totalDept}</Table.Cell>
+                    <Table.Cell>{item.description}</Table.Cell>
+                  </Table.Row>
+                ))}
+          </Table.Body>
+        </Table>
+      </div>
       <Container fluid>
-        <Button icon labelPosition="left" onClick={() => showDetail()}>
+        <Button
+          icon
+          labelPosition="left"
+          onClick={() => showDetail()}
+          basic
+          color="purple"
+        >
           <Icon name="copy outline"></Icon>
           Thông tin chi tiết
         </Button>
@@ -367,6 +418,8 @@ const Supplier = ({ handleRangeChange }) => {
           floated="right"
           style={styleButton}
           onClick={backInMenu}
+          basic
+          color="black"
         >
           <Icon name="arrow alternate circle left outline"></Icon>
           <label>Trở về</label>
@@ -377,6 +430,8 @@ const Supplier = ({ handleRangeChange }) => {
           floated="right"
           style={styleButton}
           onClick={checkForDeleting}
+          basic
+          color="grey"
         >
           <Icon name="delete"></Icon>
           Xóa
@@ -387,6 +442,8 @@ const Supplier = ({ handleRangeChange }) => {
           floated="right"
           style={styleButton}
           onClick={getInforUpdate}
+          basic
+          color="brown"
         >
           <Icon name="pencil"></Icon>Sửa
         </Button>
@@ -396,6 +453,8 @@ const Supplier = ({ handleRangeChange }) => {
           floated="right"
           style={styleButton}
           onClick={() => dispatch({ type: "open", name: "Thêm" })}
+          basic
+          color="blue"
         >
           <Icon name="plus circle"></Icon>
           Thêm
@@ -423,10 +482,17 @@ const Supplier = ({ handleRangeChange }) => {
                   type="text"
                   name="supplierCode"
                   {...register("supplierCode", {
-                    required: { value: true, message: "Vui lòng nhập" },
+                    required: {
+                      value: true,
+                      message: "Vui lòng nhập tối thiểu 3 kí tự",
+                    },
                     minLength: {
                       value: 3,
                       message: "Vui lòng nhập tối thiểu 3 kí tự",
+                    },
+                    maxLength: {
+                      value: 25,
+                      message: "Vui lòng nhập tối đa 25 kí tự",
                     },
                   })}
                   readOnly={state.name === "Hoàn thành"}
@@ -457,6 +523,10 @@ const Supplier = ({ handleRangeChange }) => {
                       value: 3,
                       message: "Vui lòng nhập tối thiểu 3 kí tự",
                     },
+                    maxLength: {
+                      value: 25,
+                      message: "Vui lòng nhập tối đa 25 kí tự",
+                    },
                   })}
                 />
               </div>
@@ -466,30 +536,91 @@ const Supplier = ({ handleRangeChange }) => {
             </Form.Field>
             <Form.Field>
               <label>Địa chỉ</label>
-              <input type="text" name="address" {...register("address")} />
+              <div
+                className={
+                  errors.address && errors.address.message
+                    ? "error field ui input"
+                    : "field ui input"
+                }
+              >
+                <input
+                  type="text"
+                  name="address"
+                  {...register("address", {
+                    maxLength: {
+                      value: 50,
+                      message: "Vui lòng nhập tối đa 50 kí tự",
+                    },
+                  })}
+                />
+              </div>
+              {errors.address && (
+                <span className="errorText">{errors.address.message}</span>
+              )}
             </Form.Field>
             <Form.Field>
               <label>Điện thoại</label>
-              <input
-                type="text"
-                name="numberPhone"
-                {...register("numberPhone")}
-              />
+              <div
+                className={
+                  errors.numberPhone && errors.numberPhone.message
+                    ? "error field ui input"
+                    : "field ui input"
+                }
+              >
+                <input
+                  type="text"
+                  name="numberPhone"
+                  {...register("numberPhone", {
+                    maxLength: {
+                      value: 11,
+                      message: "Vui lòng nhập tối đa 11 kí tự",
+                    },
+                  })}
+                />
+              </div>
               {errors.numberPhone && (
                 <span className="errorText">{errors.numberPhone.message}</span>
               )}
             </Form.Field>
             <Form.Field>
               <label>Email</label>
-              <input type="text" name="mail" {...register("mail")} />
+              <div
+                className={
+                  errors.mail && errors.mail.message
+                    ? "error field ui input"
+                    : "field ui input"
+                }
+              >
+                <input
+                  type="text"
+                  name="mail"
+                  {...register("mail", {
+                    maxLength: {
+                      value: 25,
+                      message: "Vui lòng nhập tối đa 25 kí tự",
+                    },
+                  })}
+                />
+              </div>
+              {errors.mail && (
+                <span className="errorText">{errors.mail.message}</span>
+              )}
             </Form.Field>
             <Form.Field>
               <label>Ghi chú</label>
               <textarea
                 name="description"
-                {...register("description")}
+                {...register("description", {
+                  maxLength: {
+                    value: 50,
+                    message: "Vui lòng nhập tối đa 50 kí tự",
+                  },
+                })}
                 rows={2}
               />
+              {errors.description && (
+                <span className="errorText">{errors.description.message}</span>
+              )}
             </Form.Field>
           </Form>
         </Modal.Content>
@@ -498,7 +629,7 @@ const Supplier = ({ handleRangeChange }) => {
             icon
             labelPosition="left"
             onClick={handleSubmit(onSubmit)}
-            positive
+            primary
           >
             <Icon name="plus circle"></Icon>
             {name}
@@ -517,6 +648,10 @@ const Supplier = ({ handleRangeChange }) => {
       ></CustomModal>
     </div>
   );
+};
+
+const isObjectEmpty = (objectName) => {
+  return Object.keys(objectName).length === 0;
 };
 
 const selectOptions = [

@@ -151,6 +151,8 @@ const DetailSupplier = ({ detailSupplier, handleRangeChange }) => {
               labelPosition="left"
               type="submit"
               style={{ marginLeft: 5, marginTop: 24 }}
+              basic
+              color="grey"
             >
               <Icon name="file alternate outline"></Icon>
               Xem
@@ -203,6 +205,8 @@ const DetailSupplier = ({ detailSupplier, handleRangeChange }) => {
             labelPosition="left"
             floated="right"
             onClick={() => handleRangeChange(1, undefined)}
+            basic
+            color="black"
           >
             <Icon name="arrow alternate circle left outline"></Icon>
             Trở về
@@ -212,6 +216,8 @@ const DetailSupplier = ({ detailSupplier, handleRangeChange }) => {
             labelPosition="left"
             floated="right"
             style={{ marginRight: 10 }}
+            basic
+            color="blue"
           >
             <Icon name="copy outline"></Icon>
             Xem hóa đơn

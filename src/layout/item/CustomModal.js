@@ -14,15 +14,13 @@ const CustomModal = ({ open, setOpen, deleteProcess, id }) => {
         <p>Bạn có muốn xóa nhà cung cấp mã {id}</p>
       </Modal.Content>
       <Modal.Actions>
-        <Button negative onClick={() => setOpen(false)}>
-          Hủy
-        </Button>
+        <Button onClick={() => setOpen(false)}>Hủy</Button>
         <Button
-          positive
           onClick={() => {
             setOpen(false);
             deleteProcess();
           }}
+          primary
         >
           Đồng ý
         </Button>
